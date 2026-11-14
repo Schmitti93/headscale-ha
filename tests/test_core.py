@@ -16,7 +16,12 @@ from custom_components.headscale_monitor.flow_validation import (
     async_validate_connection,
     config_flow_error,
 )
-from custom_components.headscale_monitor.models import build_snapshot, parse_snapshot
+from custom_components.headscale_monitor.models import (
+    async_fetch_snapshot,
+    build_snapshot,
+    diff_events,
+    parse_snapshot,
+)
 from custom_components.headscale_monitor.validation import normalize_url, validate_scan_interval
 
 TEST_CA = """-----BEGIN CERTIFICATE-----
@@ -212,6 +217,27 @@ async def test_api_uses_bearer_auth_and_read_only_get() -> None:
 
 
 @pytest.mark.asyncio
+async def test_api_phase1_resources_use_only_expected_get_endpoints() -> None:
+    session = FakeSession(FakeResponse(200, b"{}"))
+    client = HeadscaleApiClient("https://hs.example", "top-secret", session)
+    for method in (
+        client.async_get_health,
+        client.async_get_users,
+        client.async_get_preauth_keys,
+        client.async_get_api_keys,
+        client.async_get_policy,
+    ):
+        await method()
+    assert [call[0] for call in session.calls] == [
+        "https://hs.example/api/v1/health",
+        "https://hs.example/api/v1/user",
+        "https://hs.example/api/v1/preauthkey",
+        "https://hs.example/api/v1/apikey",
+        "https://hs.example/api/v1/policy",
+    ]
+
+
+@pytest.mark.asyncio
 async def test_api_uses_hostname_verifying_context_with_custom_ca() -> None:
     session = FakeSession(FakeResponse(200, b'{"version":"0.29.3"}'))
     context = create_ssl_context(TEST_CA)
@@ -340,3 +366,164 @@ def test_runtime_refresh_rejects_missing_nodes_envelope() -> None:
     refreshed_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
     with pytest.raises(HeadscaleMalformedResponse, match="nodes or node"):
         build_snapshot({"unrelated": []}, {"version": "0.29.3"}, refreshed_at)
+
+
+def test_phase1_snapshot_parses_live_camelcase_and_safe_aggregates() -> None:
+    refreshed_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    snapshot = build_snapshot(
+        {"nodes": [{
+            "id": "42", "name": "router", "online": True,
+            "ipAddresses": ["100.64.0.42"], "lastSeen": "2026-01-02T02:00:00Z",
+            "approvedRoutes": ["10.0.0.0/24"], "availableRoutes": ["10.1.0.0/24"],
+            "subnetRoutes": ["10.2.0.0/24"],
+            "registerMethod": "auth-key", "tags": ["tag:router"],
+            "user": {"displayName": "Alice"},
+        }]},
+        {"version": "0.29.6"},
+        refreshed_at,
+        users={"users": [{"id": "1"}, {"id": "2"}]},
+        preauth_keys={"preAuthKeys": [
+            {"id": "1", "key": "never-expose-this", "used": False,
+             "expiration": "2026-02-01T00:00:00Z"},
+            {"id": "2", "key": "also-secret", "used": True},
+        ]},
+        api_keys={"apiKeys": [
+            {"id": "1", "prefix": "safe-prefix", "expiration": "2026-01-20T00:00:00Z"},
+            {"id": "2", "prefix": "safe-prefix-2", "expiration": "2027-01-01T00:00:00Z"},
+        ]},
+        policy={"policy": "hosts:\n  secret: 10.0.0.1", "updatedAt": "2026-01-01T00:00:00Z"},
+        health={"databaseConnectivity": True},
+        response_time_ms=12.5,
+    )
+    node = snapshot.nodes[0]
+    assert node.ip_addresses == ("100.64.0.42",)
+    assert node.last_seen == "2026-01-02T02:00:00Z"
+    assert node.user_display_name == "Alice"
+    assert node.approved_routes == ("10.0.0.0/24",)
+    assert node.available_routes == ("10.1.0.0/24",)
+    assert node.registration_method == "auth-key"
+    assert node.tags == ("tag:router",)
+    assert node.subnet_routes == ("10.2.0.0/24",)
+    assert snapshot.user_count == 2
+    assert snapshot.preauth_key_count == 2
+    assert snapshot.active_preauth_key_count == 1
+    assert snapshot.api_key_count == 2
+    assert snapshot.api_keys_expiring_30_days == 1
+    assert snapshot.policy_updated_at == datetime(2026, 1, 1, tzinfo=UTC)
+    assert snapshot.database_connectivity is True
+    assert snapshot.response_time_ms == 12.5
+    assert snapshot.policy_hash
+    assert "secret" not in repr(snapshot)
+    assert "never-expose-this" not in repr(snapshot)
+
+
+def test_phase1_snapshot_preserves_snake_case_compatibility() -> None:
+    refreshed_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    snapshot = build_snapshot(
+        {"nodes": [{
+            "id": 1,
+            "approved_routes": ["10.0.0.0/24"],
+            "available_routes": ["10.1.0.0/24"],
+            "subnet_routes": ["10.2.0.0/24"],
+        }]},
+        {"version": "0.29.6"},
+        refreshed_at,
+        preauth_keys={"pre_auth_keys": [{"used": False}]},
+        api_keys={"api_keys": [{"expiration": "2026-01-20T00:00:00Z"}]},
+    )
+    assert snapshot.nodes[0].subnet_routes == ("10.2.0.0/24",)
+    assert snapshot.preauth_key_count == 1
+    assert snapshot.active_preauth_key_count == 1
+    assert snapshot.api_key_count == 1
+    assert snapshot.api_keys_expiring_30_days == 1
+
+
+def test_offsetless_key_timestamps_are_normalized_to_utc() -> None:
+    refreshed_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    snapshot = build_snapshot(
+        {"nodes": []},
+        {"version": "0.29.6"},
+        refreshed_at,
+        preauth_keys={"preAuthKeys": [{"used": False, "expiration": "2026-02-01T00:00:00"}]},
+        api_keys={"apiKeys": [{"expiration": "2026-01-20T00:00:00"}]},
+        policy={"policy": "{}", "updatedAt": "2026-01-01T00:00:00"},
+    )
+    assert snapshot.active_preauth_key_count == 1
+    assert snapshot.api_keys_expiring_30_days == 1
+    assert snapshot.policy_updated_at == datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def test_malformed_database_connectivity_is_not_exposed_as_truthy() -> None:
+    snapshot = build_snapshot(
+        {"nodes": []},
+        {"version": "0.29.6"},
+        datetime(2026, 1, 2, tzinfo=UTC),
+        health={"databaseConnectivity": "yes"},
+    )
+    assert snapshot.database_connectivity is None
+
+
+def test_diff_events_reports_safe_state_changes_without_secrets() -> None:
+    old = parse_snapshot({"version": "0.29.6", "nodes": [{"id": 1, "name": "old", "online": True}]})
+    new = parse_snapshot({"version": "0.29.6", "nodes": [
+        {"id": 1, "name": "old", "online": False}, {"id": 2, "name": "new", "online": True}
+    ]})
+    events = diff_events(old, new)
+    assert events == (
+        ("node_added", {"node_id": 2, "node_name": "new"}),
+        ("node_offline", {"node_id": 1, "node_name": "old"}),
+    )
+
+
+def test_diff_events_reports_removed_nodes_and_policy_hash_only() -> None:
+    old = parse_snapshot({
+        "version": "0.29.6",
+        "nodes": [{"id": 1, "name": "gone"}],
+        "policy": "old secret",
+    })
+    new = parse_snapshot({"version": "0.29.6", "nodes": [], "policy": "new secret"})
+    events = diff_events(old, new)
+    assert events[0] == ("node_removed", {"node_id": 1, "node_name": "gone"})
+    assert events[1][0] == "policy_changed"
+    assert set(events[1][1]) == {"old_policy_hash", "new_policy_hash"}
+    assert "secret" not in repr(events)
+
+
+@pytest.mark.asyncio
+async def test_refresh_fetches_every_phase1_resource_and_measures_response_time() -> None:
+    class Client:
+        def __init__(self):
+            self.calls = []
+
+        def __getattr__(self, name):
+            responses = {
+                "async_get_nodes": {"nodes": []},
+                "async_get_version": {"version": "0.29.6"},
+                "async_get_users": {"users": []},
+                "async_get_preauth_keys": {"preAuthKeys": []},
+                "async_get_api_keys": {"apiKeys": []},
+                "async_get_policy": {"policy": "{}"},
+                "async_get_health": {"databaseConnectivity": True},
+            }
+
+            async def call():
+                self.calls.append(name)
+                return responses[name]
+
+            return call
+
+    ticks = iter((10.0, 10.025))
+    client = Client()
+    snapshot = await async_fetch_snapshot(
+        client, datetime(2026, 1, 1, tzinfo=UTC), timer=lambda: next(ticks)
+    )
+    assert client.calls == [
+        "async_get_nodes",
+        "async_get_version",
+        "async_get_users",
+        "async_get_preauth_keys",
+        "async_get_api_keys",
+        "async_get_policy",
+        "async_get_health",
+    ]
+    assert snapshot.response_time_ms == pytest.approx(25.0)

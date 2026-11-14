@@ -23,21 +23,81 @@
   },
   "entity": {
     "sensor": {
-      "version": {"name": "Version"},
-      "total": {"name": "Total nodes"},
-      "online": {"name": "Online nodes"},
-      "offline": {"name": "Offline nodes"},
-      "last_update": {"name": "Last update"},
-      "ips": {"name": "IP addresses"},
-      "last_seen": {"name": "Last seen"},
-      "user_display_name": {"name": "User display name"},
-      "expiration": {"name": "Expiration"},
-      "approved_routes": {"name": "Approved routes"},
-      "available_routes": {"name": "Available routes"},
-      "registration_method": {"name": "Registration method"}
+      "version": {
+        "name": "Version"
+      },
+      "total": {
+        "name": "Total nodes"
+      },
+      "online": {
+        "name": "Online nodes"
+      },
+      "offline": {
+        "name": "Offline nodes"
+      },
+      "last_update": {
+        "name": "Last update"
+      },
+      "ips": {
+        "name": "IP addresses"
+      },
+      "last_seen": {
+        "name": "Last seen"
+      },
+      "user_display_name": {
+        "name": "User display name"
+      },
+      "expiration": {
+        "name": "Expiration"
+      },
+      "approved_routes": {
+        "name": "Approved routes"
+      },
+      "available_routes": {
+        "name": "Available routes"
+      },
+      "registration_method": {
+        "name": "Registration method"
+      },
+      "users": {
+        "name": "Users"
+      },
+      "preauth_keys": {
+        "name": "Pre-auth keys"
+      },
+      "active_preauth_keys": {
+        "name": "Active pre-auth keys"
+      },
+      "api_keys": {
+        "name": "API keys"
+      },
+      "api_keys_expiring_30_days": {
+        "name": "API keys expiring within 30 days"
+      },
+      "policy_hash": {
+        "name": "Policy hash"
+      },
+      "policy_updated_time": {
+        "name": "Policy updated time"
+      },
+
+      "api_response_time": {
+        "name": "API response time"
+      },
+      "tags": {
+        "name": "Tags"
+      },
+      "subnet_routes": {
+        "name": "Subnet routes"
+      }
     },
     "binary_sensor": {
-      "online": {"name": "Online"}
+      "online": {
+        "name": "Online"
+      },
+      "database_connectivity": {
+        "name": "Database connectivity"
+      }
     }
   }
 }

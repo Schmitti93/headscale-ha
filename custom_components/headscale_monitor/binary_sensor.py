@@ -3,13 +3,22 @@
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 
 from .const import DOMAIN
-from .entity import HeadscaleEntity, NodeEntityMixin, new_node_ids, node_device_info, unique_id
+from .entity import (
+    HeadscaleEntity,
+    NodeEntityMixin,
+    hub_device_info,
+    new_node_ids,
+    node_device_info,
+    unique_id,
+)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     c = hass.data[DOMAIN][entry.entry_id]
     added_ids = {n.id for n in c.data.nodes}
-    async_add_entities([NodeOnline(c, entry, n.id) for n in c.data.nodes])
+    async_add_entities(
+        [HubDatabaseConnectivity(c, entry), *[NodeOnline(c, entry, n.id) for n in c.data.nodes]]
+    )
 
     def add_discovered_nodes():
         discovered = new_node_ids(c.data, added_ids)
@@ -37,3 +46,17 @@ class NodeOnline(NodeEntityMixin, HeadscaleEntity, BinarySensorEntity):
     @property
     def is_on(self):
         return self.node.online if self.node is not None else None
+
+
+class HubDatabaseConnectivity(HeadscaleEntity, BinarySensorEntity):
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_translation_key = "database_connectivity"
+
+    def __init__(self, c, e):
+        super().__init__(c, e)
+        self._attr_unique_id = unique_id(e.entry_id, "hub", "main", "database_connectivity")
+        self._attr_device_info = hub_device_info(e.entry_id)
+
+    @property
+    def is_on(self):
+        return self.coordinator.data.database_connectivity

@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-14
+
+### Added
+
+- Read-only monitoring for users, pre-auth keys, API keys, policy metadata,
+  database connectivity, and complete API response time.
+- Node tags and distinct subnet, approved, and available route sensors.
+- Secret-free Home Assistant events for node lifecycle, connectivity changes,
+  and policy changes.
+
+### Changed
+
+- Parse the live Headscale v0.29.6 camelCase API while retaining legacy
+  snake_case compatibility.
+- Pin the isolated runtime smoke test to Home Assistant 2026.11.1.
+
+### Security
+
+- Pre-auth key values and raw policy content are never retained in snapshots,
+  entities, events, diagnostics, or logs.
+
 ## [0.2.3] - 2026-11-14
 
 ### Fixed
@@ -46,7 +67,8 @@ All notable changes to this project are documented here.
 - Rejects CA input containing private-key material.
 - Does not provide Headscale mutation services.
 
-[Unreleased]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/Schmitti93/headscale-ha/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.0...v0.2.1

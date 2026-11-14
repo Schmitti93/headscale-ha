@@ -1,1 +1,103 @@
-{"config":{"step":{"user":{"title":"Connect to Headscale","description":"Read-only monitoring over HTTPS with certificate verification. Headscale API keys are full-power credentials. Optionally provide a PEM CA certificate for a private gateway.","data":{"url":"HTTPS URL","api_key":"API key","ca_certificate":"Custom CA certificate (PEM, optional)","scan_interval":"Scan interval (seconds)"}}},"error":{"cannot_connect":"Cannot connect","invalid_auth":"Invalid authentication","invalid_data":"Invalid HTTPS URL, CA certificate, or response"},"abort":{"already_configured":"This server is already configured"}},"entity":{"sensor":{"version":{"name":"Version"},"total":{"name":"Total nodes"},"online":{"name":"Online nodes"},"offline":{"name":"Offline nodes"},"last_update":{"name":"Last update"},"ips":{"name":"IP addresses"},"last_seen":{"name":"Last seen"},"user_display_name":{"name":"User display name"},"expiration":{"name":"Expiration"},"approved_routes":{"name":"Approved routes"},"available_routes":{"name":"Available routes"},"registration_method":{"name":"Registration method"}},"binary_sensor":{"online":{"name":"Online"}}}}
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Headscale",
+        "description": "Read-only monitoring over HTTPS with certificate verification. Headscale API keys are full-power credentials. Optionally provide a PEM CA certificate for a private gateway.",
+        "data": {
+          "url": "HTTPS URL",
+          "api_key": "API key",
+          "ca_certificate": "Custom CA certificate (PEM, optional)",
+          "scan_interval": "Scan interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect",
+      "invalid_auth": "Invalid authentication",
+      "invalid_data": "Invalid HTTPS URL, CA certificate, or response"
+    },
+    "abort": {
+      "already_configured": "This server is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "version": {
+        "name": "Version"
+      },
+      "total": {
+        "name": "Total nodes"
+      },
+      "online": {
+        "name": "Online nodes"
+      },
+      "offline": {
+        "name": "Offline nodes"
+      },
+      "last_update": {
+        "name": "Last update"
+      },
+      "ips": {
+        "name": "IP addresses"
+      },
+      "last_seen": {
+        "name": "Last seen"
+      },
+      "user_display_name": {
+        "name": "User display name"
+      },
+      "expiration": {
+        "name": "Expiration"
+      },
+      "approved_routes": {
+        "name": "Approved routes"
+      },
+      "available_routes": {
+        "name": "Available routes"
+      },
+      "registration_method": {
+        "name": "Registration method"
+      },
+      "users": {
+        "name": "Users"
+      },
+      "preauth_keys": {
+        "name": "Pre-auth keys"
+      },
+      "active_preauth_keys": {
+        "name": "Active pre-auth keys"
+      },
+      "api_keys": {
+        "name": "API keys"
+      },
+      "api_keys_expiring_30_days": {
+        "name": "API keys expiring within 30 days"
+      },
+      "policy_hash": {
+        "name": "Policy hash"
+      },
+      "policy_updated_time": {
+        "name": "Policy updated time"
+      },
+
+      "api_response_time": {
+        "name": "API response time"
+      },
+      "tags": {
+        "name": "Tags"
+      },
+      "subnet_routes": {
+        "name": "Subnet routes"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      },
+      "database_connectivity": {
+        "name": "Database connectivity"
+      }
+    }
+  }
+}

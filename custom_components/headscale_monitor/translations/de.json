@@ -1,1 +1,63 @@
-{"config":{"step":{"user":{"title":"Mit Headscale verbinden","description":"Nur-Lese-Monitoring über HTTPS mit Zertifikatsprüfung. Headscale-API-Schlüssel haben vollständige Berechtigungen. Optional kann ein PEM-CA-Zertifikat für ein privates Gateway angegeben werden.","data":{"url":"HTTPS-URL","api_key":"API-Schlüssel","ca_certificate":"Benutzerdefiniertes CA-Zertifikat (PEM, optional)","scan_interval":"Abfrageintervall (Sekunden)"}}},"error":{"cannot_connect":"Verbindung nicht möglich","invalid_auth":"Ungültige Authentifizierung","invalid_data":"Ungültige HTTPS-URL, ungültiges CA-Zertifikat oder ungültige Antwort"},"abort":{"already_configured":"Dieser Server ist bereits konfiguriert"}}}
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit Headscale verbinden",
+        "description": "Nur-Lese-Monitoring über HTTPS mit Zertifikatsprüfung. Headscale-API-Schlüssel haben vollständige Berechtigungen. Optional kann ein PEM-CA-Zertifikat für ein privates Gateway angegeben werden.",
+        "data": {
+          "url": "HTTPS-URL",
+          "api_key": "API-Schlüssel",
+          "ca_certificate": "Benutzerdefiniertes CA-Zertifikat (PEM, optional)",
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung nicht möglich",
+      "invalid_auth": "Ungültige Authentifizierung",
+      "invalid_data": "Ungültige HTTPS-URL, ungültiges CA-Zertifikat oder ungültige Antwort"
+    },
+    "abort": {
+      "already_configured": "Dieser Server ist bereits konfiguriert"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "users": {
+        "name": "Benutzer"
+      },
+      "preauth_keys": {
+        "name": "Pre-Auth-Schlüssel"
+      },
+      "active_preauth_keys": {
+        "name": "Aktive Pre-Auth-Schlüssel"
+      },
+      "api_keys": {
+        "name": "API-Schlüssel"
+      },
+      "api_keys_expiring_30_days": {
+        "name": "In 30 Tagen ablaufende API-Schlüssel"
+      },
+      "policy_hash": {
+        "name": "Policy-Prüfsumme"
+      },
+      "policy_updated_time": {
+        "name": "Policy zuletzt geändert"
+      },
+      "api_response_time": {
+        "name": "API-Antwortzeit"
+      },
+      "tags": {
+        "name": "Tags"
+      },
+      "subnet_routes": {
+        "name": "Subnetz-Routen"
+      }
+    },
+    "binary_sensor": {
+      "database_connectivity": {
+        "name": "Datenbankverbindung"
+      }
+    }
+  }
+}

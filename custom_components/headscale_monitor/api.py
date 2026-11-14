@@ -105,3 +105,18 @@ class HeadscaleApiClient:
 
     async def async_get_version(self):
         return await self._get("/version")
+
+    async def async_get_health(self):
+        return await self._get("/api/v1/health")
+
+    async def async_get_users(self):
+        return await self._get("/api/v1/user")
+
+    async def async_get_preauth_keys(self):
+        return await self._get("/api/v1/preauthkey")
+
+    async def async_get_api_keys(self):
+        return await self._get("/api/v1/apikey")
+
+    async def async_get_policy(self):
+        return await self._get("/api/v1/policy")

@@ -13,7 +13,7 @@ def test_marketplace_metadata_points_to_public_project_resources():
     assert manifest["documentation"] == "https://github.com/Schmitti93/headscale-ha"
     assert manifest["issue_tracker"] == "https://github.com/Schmitti93/headscale-ha/issues"
     assert manifest["integration_type"] == "hub"
-    assert manifest["version"] == "0.2.3"
+    assert manifest["version"] == "0.3.0"
 
 
 def test_hacs_metadata_declares_integration_archive_layout():
