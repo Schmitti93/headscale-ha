@@ -1,4 +1,5 @@
 import json
+import ssl
 from datetime import UTC, datetime
 
 import pytest
@@ -8,6 +9,7 @@ from custom_components.headscale_monitor.api import (
     HeadscaleAuthError,
     HeadscaleMalformedResponse,
     HeadscaleResponseTooLarge,
+    create_ssl_context,
 )
 from custom_components.headscale_monitor.diagnostics import diagnostic_payload, redact
 from custom_components.headscale_monitor.flow_validation import (
@@ -16,6 +18,26 @@ from custom_components.headscale_monitor.flow_validation import (
 )
 from custom_components.headscale_monitor.models import build_snapshot, parse_snapshot
 from custom_components.headscale_monitor.validation import normalize_url, validate_scan_interval
+
+TEST_CA = """-----BEGIN CERTIFICATE-----
+MIIDGTCCAgGgAwIBAgIULgOuguT9UkSlulZ7zTtEhxal0xgwDQYJKoZIhvcNAQEL
+BQAwHDEaMBgGA1UEAwwRSGVhZHNjYWxlIFRlc3QgQ0EwHhcNMjYxMTE0MTEyNTI0
+WhcNMzYxMTExMTEyNTI0WjAcMRowGAYDVQQDDBFIZWFkc2NhbGUgVGVzdCBDQTCC
+ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMXc4tLt/5UZS8PeywNHM83V
+LF7Jp7zsgUxJ5bY+IR/rQOgtw7jnzFyYvAZ/yq/yN4tPwLmPXwULzcLXzZzFIZsd
+FjawjzNGwRY4j+sOizw2kzkik6x5L4HA1ARumg44XB6xpN3iQLoJE4NQDMqPaGbY
+IQ/7ztF2cIy335Pz4M9/M8migYqkrQ39xoJa9/ZXJdvTPX6flHTct20PT41A9hdg
+wOmLpkVSjYH2IIXE2c2DgN/aVFkGIOC29Jbm14pVIolNZY57sSfdQIsrsp49r4VH
+SsjFP/jFq2VhqaanlK+xNnWauWqqw1xZZsOcjphV8tOBvIJE1IYlt8w06VDfgCEC
+AwEAAaNTMFEwHQYDVR0OBBYEFCpTHUiFRSVNQsGzstixljYLbngTMB8GA1UdIwQY
+MBaAFCpTHUiFRSVNQsGzstixljYLbngTMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZI
+hvcNAQELBQADggEBADQvtDeGZ+JkzbwVOkgHlrbnqi17bVIR29dW7UQmYTrwf9pK
+N5iC2LMJ+JzzMuZeyIsX5DRP9Sja7zuEN9oBG6/t2Bdl6lECcio3bs4CmR+PjOG+
+HZxN2XUj5NIzVYJFX/uBQe6AQnRBoBEiYZPLja9aOGKY7+WaPuJ9ihDvCZQG2BVd
+nozkqzmhYOh7zO0FF7+eYVixQOQWBHvg/jou/tnxSp/9yBbSpcaEANvCHrPomXZ5
+mOONCtEQmPTfgC9faP45DHQQH9LYfJYnM1umrxlU/m48wHPLl6pdkmTNlFqqytHP
+nT6a18zs84JM1l2ZFZhls85ga+YM1LVKZVz96GI=
+-----END CERTIFICATE-----"""
 
 
 def test_url_normalization_and_interval_bounds() -> None:
@@ -42,6 +64,18 @@ def test_api_client_rejects_insecure_transport_settings() -> None:
             FakeSession(FakeResponse(200, b"{}")),
             verify_tls=False,
         )
+
+
+def test_api_client_rejects_malformed_custom_ca_cleanly() -> None:
+    with pytest.raises(ValueError, match="CA certificate"):
+        create_ssl_context("not a PEM certificate")
+
+
+def test_custom_ca_rejects_key_material() -> None:
+    forbidden_marker = "PRIVATE" + " KEY"
+    pem = f"{TEST_CA}\n-----BEGIN {forbidden_marker}-----\nnot-key-material"
+    with pytest.raises(ValueError, match="private key"):
+        create_ssl_context(pem)
 
 
 def test_parse_snapshot_handles_headscale_0293_snake_case_fields() -> None:
@@ -127,6 +161,11 @@ def test_diagnostic_payload_converts_snapshot_and_redacts_pii() -> None:
     assert result["snapshot"]["nodes"] == "**REDACTED**"
 
 
+def test_diagnostics_redact_custom_ca_certificate() -> None:
+    result = redact({"ca_certificate": TEST_CA})
+    assert result["ca_certificate"] == "**REDACTED**"
+
+
 class FakeResponse:
     def __init__(self, status: int, body: bytes, content_length: int | None = None):
         self.status, self._body, self.content_length = status, body, content_length
@@ -170,6 +209,23 @@ async def test_api_uses_bearer_auth_and_read_only_get() -> None:
     assert url == "https://hs.example/api/v1/node"
     assert kwargs["headers"]["Authorization"] == "Bearer top-secret"
     assert kwargs["ssl"] is True
+
+
+@pytest.mark.asyncio
+async def test_api_uses_hostname_verifying_context_with_custom_ca() -> None:
+    session = FakeSession(FakeResponse(200, b'{"version":"0.29.3"}'))
+    context = create_ssl_context(TEST_CA)
+    client = HeadscaleApiClient("https://hs.example", "secret", session, ssl_context=context)
+
+    await client.async_get_version()
+
+    request_context = session.calls[0][1]["ssl"]
+    assert request_context is context
+    assert isinstance(request_context, ssl.SSLContext)
+    assert request_context.verify_mode is ssl.CERT_REQUIRED
+    assert request_context.check_hostname is True
+    subjects = [str(cert.get("subject")) for cert in request_context.get_ca_certs()]
+    assert any("Headscale Test CA" in subject for subject in subjects)
 
 
 @pytest.mark.asyncio

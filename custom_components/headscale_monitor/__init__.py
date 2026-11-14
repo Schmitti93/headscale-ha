@@ -7,13 +7,22 @@ async def async_setup_entry(hass, entry):
     from homeassistant.exceptions import ConfigEntryError
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-    from .api import HeadscaleApiClient
-    from .const import CONF_API_KEY, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+    from .api import HeadscaleApiClient, create_ssl_context
+    from .const import (
+        CONF_API_KEY,
+        CONF_CA_CERTIFICATE,
+        CONF_SCAN_INTERVAL,
+        DEFAULT_SCAN_INTERVAL,
+    )
     from .coordinator import HeadscaleCoordinator
     from .validation import validate_entry_transport
 
     try:
         url = validate_entry_transport(entry.data)
+        ca_certificate = entry.data.get(CONF_CA_CERTIFICATE)
+        ssl_context = None
+        if ca_certificate:
+            ssl_context = await hass.async_add_executor_job(create_ssl_context, ca_certificate)
     except ValueError as exc:
         raise ConfigEntryError(f"Insecure or invalid Headscale config entry: {exc}") from exc
 
@@ -21,7 +30,7 @@ async def async_setup_entry(hass, entry):
         url,
         entry.data[CONF_API_KEY],
         async_get_clientsession(hass),
-        True,
+        ssl_context=ssl_context,
     )
     coordinator = HeadscaleCoordinator(
         hass,

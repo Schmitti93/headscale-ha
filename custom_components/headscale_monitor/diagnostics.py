@@ -6,6 +6,7 @@ from typing import Any
 _REDACT = {
     "api_key",
     "apikey",
+    "ca_certificate",
     "url",
     "machinekey",
     "machine_key",
