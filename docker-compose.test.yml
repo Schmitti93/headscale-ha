@@ -1,0 +1,15 @@
+services:
+  homeassistant-test:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    ports:
+      - "127.0.0.1:18123:8123"
+    volumes:
+      - ./custom_components/headscale_monitor:/config/custom_components/headscale_monitor:ro
+      - ha-test-config:/config
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    restart: "no"
+volumes:
+  ha-test-config: {}
