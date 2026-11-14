@@ -11,7 +11,11 @@ from .models import build_snapshot
 class HeadscaleCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, client, interval):
         self.client = client
-        super().__init__(hass, __name__, update_interval=timedelta(seconds=interval))
+        super().__init__(
+            hass,
+            name=__name__,
+            update_interval=timedelta(seconds=interval),
+        )
 
     async def _async_update_data(self):
         try:

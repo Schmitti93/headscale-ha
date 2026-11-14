@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-14
+
+### Fixed
+
+- Restored compatibility with Home Assistant 2026.11, where the coordinator
+  name is a required keyword-only argument.
+
 ## [0.2.1] - 2026-11-14
 
 ### Changed
@@ -32,6 +39,7 @@ All notable changes to this project are documented here.
 - Rejects CA input containing private-key material.
 - Does not provide Headscale mutation services.
 
-[Unreleased]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Schmitti93/headscale-ha/releases/tag/v0.2.0
