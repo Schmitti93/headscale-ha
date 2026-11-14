@@ -13,6 +13,12 @@ async def main() -> None:
     async with aiohttp.ClientSession() as session:
         client = HeadscaleApiClient("https://headscale-mock:8443", "integration-test", session)
         snapshot = await async_fetch_snapshot(client, datetime.now(UTC))
+        await client.async_approve_registration("auth-test")
+        await client.async_reject_registration("auth-test")
+        await client.async_set_approved_routes(1, ["10.0.0.0/24"])
+        await client.async_rename_node(1, "isolated-renamed")
+        await client.async_set_tags(1, ["tag:test"])
+        await client.async_expire_node(1)
     if (
         snapshot.version != "0.29.3"
         or [node.id for node in snapshot.nodes] != [1]
@@ -20,7 +26,7 @@ async def main() -> None:
         or snapshot.database_connectivity is not True
     ):
         raise RuntimeError("mock returned an unexpected Headscale snapshot")
-    print("isolated HTTPS smoke passed: version=0.29.3 nodes=1 users=1 database=up")
+    print("isolated HTTPS smoke passed: version=0.29.3 nodes=1 users=1 database=up actions=6")
 
 
 if __name__ == "__main__":

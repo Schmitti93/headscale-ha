@@ -46,9 +46,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities = [HubSensor(c, entry, metric) for metric in HUB_METRICS]
     added_ids = {n.id for n in c.data.nodes}
     entities.extend(
-        NodeSensor(c, entry, node.id, metric)
-        for node in c.data.nodes
-        for metric in NODE_METRICS
+        NodeSensor(c, entry, node.id, metric) for node in c.data.nodes for metric in NODE_METRICS
     )
     async_add_entities(entities)
 

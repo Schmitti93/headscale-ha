@@ -101,19 +101,20 @@ def build_snapshot(
     response_time_ms: float | None = None,
 ) -> Snapshot:
     policy_data = policy or {}
-    snapshot = parse_snapshot({
-        "nodes": extract_node_items(nodes),
-        "version": version,
-        "policy": policy_data.get("policy"),
-    })
+    snapshot = parse_snapshot(
+        {
+            "nodes": extract_node_items(nodes),
+            "version": version,
+            "policy": policy_data.get("policy"),
+        }
+    )
     preauth_items = _items(preauth_keys, "preAuthKeys", "pre_auth_keys")
     api_items = _items(api_keys, "apiKeys", "api_keys")
     horizon = refreshed_at + timedelta(days=30)
     active_preauth = sum(
         not bool(item.get("used"))
         and (
-            (expiration := _parse_time(item.get("expiration"))) is None
-            or expiration > refreshed_at
+            (expiration := _parse_time(item.get("expiration"))) is None or expiration > refreshed_at
         )
         for item in preauth_items
         if isinstance(item, dict)
@@ -136,9 +137,7 @@ def build_snapshot(
         snapshot.policy_hash,
         _parse_time(policy_data.get("updatedAt") or policy_data.get("updated_at")),
         _optional_bool(
-            (health or {}).get(
-                "databaseConnectivity", (health or {}).get("database_connectivity")
-            )
+            (health or {}).get("databaseConnectivity", (health or {}).get("database_connectivity"))
         ),
         response_time_ms,
     )
@@ -243,8 +242,13 @@ def diff_events(old: Snapshot, new: Snapshot) -> tuple[tuple[str, dict[str, Any]
             event = "node_online" if after.online else "node_offline"
             events.append((event, {"node_id": after.id, "node_name": after.name}))
     if old.policy_hash != new.policy_hash and (old.policy_hash or new.policy_hash):
-        events.append(("policy_changed", {
-            "old_policy_hash": old.policy_hash,
-            "new_policy_hash": new.policy_hash,
-        }))
+        events.append(
+            (
+                "policy_changed",
+                {
+                    "old_policy_hash": old.policy_hash,
+                    "new_policy_hash": new.policy_hash,
+                },
+            )
+        )
     return tuple(events)

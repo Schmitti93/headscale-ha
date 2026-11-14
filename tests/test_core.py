@@ -22,6 +22,14 @@ from custom_components.headscale_monitor.models import (
     diff_events,
     parse_snapshot,
 )
+from custom_components.headscale_monitor.services import (
+    validate_auth_id,
+    validate_confirmation,
+    validate_node_id,
+    validate_node_name,
+    validate_routes,
+    validate_tags,
+)
 from custom_components.headscale_monitor.validation import normalize_url, validate_scan_interval
 
 TEST_CA = """-----BEGIN CERTIFICATE-----
@@ -204,6 +212,84 @@ class FakeSession:
         self.calls.append((url, kwargs))
         return self.response
 
+    def post(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        return self.response
+
+
+def test_phase2_service_input_validation_is_conservative() -> None:
+    assert validate_node_id(42) == 42
+    assert validate_auth_id("01234567-89ab-cdef-0123-456789abcdef") == (
+        "01234567-89ab-cdef-0123-456789abcdef"
+    )
+    assert validate_node_name("router-01") == "router-01"
+    assert validate_routes(["10.0.0.1/24", "2001:db8::1/64"]) == [
+        "10.0.0.0/24",
+        "2001:db8::/64",
+    ]
+    assert validate_tags(["tag:router", "tag:prod_web-1"]) == [
+        "tag:router",
+        "tag:prod_web-1",
+    ]
+    assert validate_confirmation(True) is True
+    with pytest.raises(ValueError, match="confirm"):
+        validate_confirmation(False)
+
+
+@pytest.mark.parametrize("value", [0, -1, True, 1.5, "1"])
+def test_phase2_rejects_invalid_node_ids(value) -> None:
+    with pytest.raises(ValueError, match="node_id"):
+        validate_node_id(value)
+
+
+@pytest.mark.parametrize("value", ["", "../x", "a b", "x" * 129])
+def test_phase2_rejects_invalid_auth_ids(value) -> None:
+    with pytest.raises(ValueError, match="auth_id"):
+        validate_auth_id(value)
+
+
+@pytest.mark.parametrize("value", ["", "-bad", "bad-", "bad/name", "router.example", "x" * 64])
+def test_phase2_rejects_invalid_node_names(value) -> None:
+    with pytest.raises(ValueError, match="new_name"):
+        validate_node_name(value)
+
+
+@pytest.mark.parametrize("value", [["not-a-route"], ["10.0.0.0/33"], "10.0.0.0/24"])
+def test_phase2_rejects_invalid_routes(value) -> None:
+    with pytest.raises(ValueError, match="routes"):
+        validate_routes(value)
+
+
+@pytest.mark.parametrize("value", [[], ["router"], ["tag:bad space"], ["tag:x/y"], "tag:router"])
+def test_phase2_rejects_invalid_tags(value) -> None:
+    with pytest.raises(ValueError, match="tags"):
+        validate_tags(value)
+
+
+@pytest.mark.asyncio
+async def test_phase2_api_posts_exact_authorized_endpoints_and_payloads() -> None:
+    session = FakeSession(FakeResponse(200, b"{}"))
+    client = HeadscaleApiClient("https://hs.example", "top-secret", session)
+
+    await client.async_approve_registration("auth-123")
+    await client.async_reject_registration("auth-123")
+    await client.async_set_approved_routes(42, ["10.0.0.0/24"])
+    await client.async_rename_node(42, "new name/edge")
+    await client.async_set_tags(42, ["tag:router"])
+    await client.async_expire_node(42)
+
+    assert [(url, kwargs.get("json")) for url, kwargs in session.calls] == [
+        ("https://hs.example/api/v1/auth/approve", {"authId": "auth-123"}),
+        ("https://hs.example/api/v1/auth/reject", {"authId": "auth-123"}),
+        ("https://hs.example/api/v1/node/42/approve_routes", {"routes": ["10.0.0.0/24"]}),
+        ("https://hs.example/api/v1/node/42/rename/new%20name%2Fedge", None),
+        ("https://hs.example/api/v1/node/42/tags", {"tags": ["tag:router"]}),
+        ("https://hs.example/api/v1/node/42/expire", None),
+    ]
+    for _, kwargs in session.calls:
+        assert kwargs["headers"]["Authorization"] == "Bearer top-secret"
+        assert kwargs["ssl"] is True
+
 
 @pytest.mark.asyncio
 async def test_api_uses_bearer_auth_and_read_only_get() -> None:
@@ -371,26 +457,43 @@ def test_runtime_refresh_rejects_missing_nodes_envelope() -> None:
 def test_phase1_snapshot_parses_live_camelcase_and_safe_aggregates() -> None:
     refreshed_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
     snapshot = build_snapshot(
-        {"nodes": [{
-            "id": "42", "name": "router", "online": True,
-            "ipAddresses": ["100.64.0.42"], "lastSeen": "2026-01-02T02:00:00Z",
-            "approvedRoutes": ["10.0.0.0/24"], "availableRoutes": ["10.1.0.0/24"],
-            "subnetRoutes": ["10.2.0.0/24"],
-            "registerMethod": "auth-key", "tags": ["tag:router"],
-            "user": {"displayName": "Alice"},
-        }]},
+        {
+            "nodes": [
+                {
+                    "id": "42",
+                    "name": "router",
+                    "online": True,
+                    "ipAddresses": ["100.64.0.42"],
+                    "lastSeen": "2026-01-02T02:00:00Z",
+                    "approvedRoutes": ["10.0.0.0/24"],
+                    "availableRoutes": ["10.1.0.0/24"],
+                    "subnetRoutes": ["10.2.0.0/24"],
+                    "registerMethod": "auth-key",
+                    "tags": ["tag:router"],
+                    "user": {"displayName": "Alice"},
+                }
+            ]
+        },
         {"version": "0.29.6"},
         refreshed_at,
         users={"users": [{"id": "1"}, {"id": "2"}]},
-        preauth_keys={"preAuthKeys": [
-            {"id": "1", "key": "never-expose-this", "used": False,
-             "expiration": "2026-02-01T00:00:00Z"},
-            {"id": "2", "key": "also-secret", "used": True},
-        ]},
-        api_keys={"apiKeys": [
-            {"id": "1", "prefix": "safe-prefix", "expiration": "2026-01-20T00:00:00Z"},
-            {"id": "2", "prefix": "safe-prefix-2", "expiration": "2027-01-01T00:00:00Z"},
-        ]},
+        preauth_keys={
+            "preAuthKeys": [
+                {
+                    "id": "1",
+                    "key": "never-expose-this",
+                    "used": False,
+                    "expiration": "2026-02-01T00:00:00Z",
+                },
+                {"id": "2", "key": "also-secret", "used": True},
+            ]
+        },
+        api_keys={
+            "apiKeys": [
+                {"id": "1", "prefix": "safe-prefix", "expiration": "2026-01-20T00:00:00Z"},
+                {"id": "2", "prefix": "safe-prefix-2", "expiration": "2027-01-01T00:00:00Z"},
+            ]
+        },
         policy={"policy": "hosts:\n  secret: 10.0.0.1", "updatedAt": "2026-01-01T00:00:00Z"},
         health={"databaseConnectivity": True},
         response_time_ms=12.5,
@@ -420,12 +523,16 @@ def test_phase1_snapshot_parses_live_camelcase_and_safe_aggregates() -> None:
 def test_phase1_snapshot_preserves_snake_case_compatibility() -> None:
     refreshed_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
     snapshot = build_snapshot(
-        {"nodes": [{
-            "id": 1,
-            "approved_routes": ["10.0.0.0/24"],
-            "available_routes": ["10.1.0.0/24"],
-            "subnet_routes": ["10.2.0.0/24"],
-        }]},
+        {
+            "nodes": [
+                {
+                    "id": 1,
+                    "approved_routes": ["10.0.0.0/24"],
+                    "available_routes": ["10.1.0.0/24"],
+                    "subnet_routes": ["10.2.0.0/24"],
+                }
+            ]
+        },
         {"version": "0.29.6"},
         refreshed_at,
         preauth_keys={"pre_auth_keys": [{"used": False}]},
@@ -465,9 +572,15 @@ def test_malformed_database_connectivity_is_not_exposed_as_truthy() -> None:
 
 def test_diff_events_reports_safe_state_changes_without_secrets() -> None:
     old = parse_snapshot({"version": "0.29.6", "nodes": [{"id": 1, "name": "old", "online": True}]})
-    new = parse_snapshot({"version": "0.29.6", "nodes": [
-        {"id": 1, "name": "old", "online": False}, {"id": 2, "name": "new", "online": True}
-    ]})
+    new = parse_snapshot(
+        {
+            "version": "0.29.6",
+            "nodes": [
+                {"id": 1, "name": "old", "online": False},
+                {"id": 2, "name": "new", "online": True},
+            ],
+        }
+    )
     events = diff_events(old, new)
     assert events == (
         ("node_added", {"node_id": 2, "node_name": "new"}),
@@ -476,11 +589,13 @@ def test_diff_events_reports_safe_state_changes_without_secrets() -> None:
 
 
 def test_diff_events_reports_removed_nodes_and_policy_hash_only() -> None:
-    old = parse_snapshot({
-        "version": "0.29.6",
-        "nodes": [{"id": 1, "name": "gone"}],
-        "policy": "old secret",
-    })
+    old = parse_snapshot(
+        {
+            "version": "0.29.6",
+            "nodes": [{"id": 1, "name": "gone"}],
+            "policy": "old secret",
+        }
+    )
     new = parse_snapshot({"version": "0.29.6", "nodes": [], "policy": "new secret"})
     events = diff_events(old, new)
     assert events[0] == ("node_removed", {"node_id": 1, "node_name": "gone"})

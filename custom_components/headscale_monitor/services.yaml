@@ -1,0 +1,120 @@
+approve_registration:
+  name: Approve registration
+  description: Approve a pending Headscale registration by authentication ID.
+  fields:
+    config_entry_id:
+      name: Config entry ID
+      required: true
+      selector:
+        text:
+    auth_id:
+      name: Authentication ID
+      required: true
+      selector:
+        text:
+
+reject_registration:
+  name: Reject registration
+  description: Reject a pending Headscale registration by authentication ID.
+  fields:
+    config_entry_id:
+      name: Config entry ID
+      required: true
+      selector:
+        text:
+    auth_id:
+      name: Authentication ID
+      required: true
+      selector:
+        text:
+
+set_approved_routes:
+  name: Set approved routes
+  description: Replace all approved routes for a Headscale node. An empty list removes all approvals.
+  fields:
+    config_entry_id:
+      name: Config entry ID
+      required: true
+      selector:
+        text:
+    node_id:
+      name: Node ID
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    routes:
+      name: Routes
+      description: List of IPv4 or IPv6 network prefixes.
+      required: true
+      selector:
+        object:
+
+rename_node:
+  name: Rename node
+  description: Rename a Headscale node.
+  fields:
+    config_entry_id:
+      name: Config entry ID
+      required: true
+      selector:
+        text:
+    node_id:
+      name: Node ID
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    new_name:
+      name: New name
+      required: true
+      selector:
+        text:
+
+set_tags:
+  name: Set node tags
+  description: Replace all tags on a node. At least one tag is required by Headscale.
+  fields:
+    config_entry_id:
+      name: Config entry ID
+      required: true
+      selector:
+        text:
+    node_id:
+      name: Node ID
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    tags:
+      name: Tags
+      description: List of tags in tag:name format.
+      required: true
+      selector:
+        object:
+
+expire_node:
+  name: Expire node
+  description: Immediately expire and log out a Headscale node.
+  fields:
+    config_entry_id:
+      name: Config entry ID
+      required: true
+      selector:
+        text:
+    node_id:
+      name: Node ID
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    confirm:
+      name: Confirm logout
+      description: Must be enabled to expire and log out the node.
+      required: true
+      selector:
+        boolean:

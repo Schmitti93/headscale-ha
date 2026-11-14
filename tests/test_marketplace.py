@@ -5,15 +5,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_marketplace_metadata_points_to_public_project_resources():
-    manifest = json.loads(
-        (ROOT / "custom_components/headscale_monitor/manifest.json").read_text()
-    )
+    manifest = json.loads((ROOT / "custom_components/headscale_monitor/manifest.json").read_text())
 
     assert manifest["codeowners"] == ["@Schmitti93"]
     assert manifest["documentation"] == "https://github.com/Schmitti93/headscale-ha"
     assert manifest["issue_tracker"] == "https://github.com/Schmitti93/headscale-ha/issues"
     assert manifest["integration_type"] == "hub"
-    assert manifest["version"] == "0.3.0"
+    assert manifest["version"] == "0.4.0"
 
 
 def test_hacs_metadata_declares_integration_archive_layout():
@@ -33,14 +31,9 @@ def test_marketplace_brand_assets_are_inside_integration_directory():
 
 
 def test_english_translation_contains_all_entity_translation_keys():
-    strings = json.loads(
-        (ROOT / "custom_components/headscale_monitor/strings.json").read_text()
-    )
+    strings = json.loads((ROOT / "custom_components/headscale_monitor/strings.json").read_text())
     english = json.loads(
-        (
-            ROOT
-            / "custom_components/headscale_monitor/translations/en.json"
-        ).read_text()
+        (ROOT / "custom_components/headscale_monitor/translations/en.json").read_text()
     )
 
     assert english["entity"] == strings["entity"]

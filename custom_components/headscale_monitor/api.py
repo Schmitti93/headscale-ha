@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import ssl
 from typing import Any
+from urllib.parse import quote
 
 import aiohttp
 
@@ -63,13 +64,24 @@ class HeadscaleApiClient:
         self._session = session
         self._ssl: bool | ssl.SSLContext = ssl_context or True
 
-    async def _get(self, path: str) -> dict[str, Any]:
+    async def _request(
+        self, method: str, path: str, *, json_body: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         try:
-            async with self._session.get(
+            request = getattr(self._session, method)
+            kwargs: dict[str, Any] = {
+                "headers": {
+                    "Authorization": f"Bearer {self._api_key}",
+                    "Accept": "application/json",
+                },
+                "ssl": self._ssl,
+                "timeout": aiohttp.ClientTimeout(total=15, connect=5),
+            }
+            if json_body is not None:
+                kwargs["json"] = json_body
+            async with request(
                 self._base_url + path,
-                headers={"Authorization": f"Bearer {self._api_key}", "Accept": "application/json"},
-                ssl=self._ssl,
-                timeout=aiohttp.ClientTimeout(total=15, connect=5),
+                **kwargs,
             ) as response:
                 if response.status in (401, 403):
                     raise HeadscaleAuthError("authentication failed")
@@ -100,6 +112,12 @@ class HeadscaleApiClient:
             raise HeadscaleMalformedResponse("response must be an object")
         return value
 
+    async def _get(self, path: str) -> dict[str, Any]:
+        return await self._request("get", path)
+
+    async def _post(self, path: str, *, json_body: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await self._request("post", path, json_body=json_body)
+
     async def async_get_nodes(self):
         return await self._get("/api/v1/node")
 
@@ -120,3 +138,24 @@ class HeadscaleApiClient:
 
     async def async_get_policy(self):
         return await self._get("/api/v1/policy")
+
+    async def async_approve_registration(self, auth_id: str):
+        return await self._post("/api/v1/auth/approve", json_body={"authId": auth_id})
+
+    async def async_reject_registration(self, auth_id: str):
+        return await self._post("/api/v1/auth/reject", json_body={"authId": auth_id})
+
+    async def async_set_approved_routes(self, node_id: int, routes: list[str]):
+        return await self._post(
+            f"/api/v1/node/{node_id}/approve_routes", json_body={"routes": routes}
+        )
+
+    async def async_rename_node(self, node_id: int, new_name: str):
+        encoded_name = quote(new_name, safe="")
+        return await self._post(f"/api/v1/node/{node_id}/rename/{encoded_name}")
+
+    async def async_set_tags(self, node_id: int, tags: list[str]):
+        return await self._post(f"/api/v1/node/{node_id}/tags", json_body={"tags": tags})
+
+    async def async_expire_node(self, node_id: int):
+        return await self._post(f"/api/v1/node/{node_id}/expire")

@@ -43,6 +43,9 @@ async def async_setup_entry(hass, entry):
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    from .services import async_register_services
+
+    async_register_services(hass)
     return True
 
 
@@ -54,4 +57,7 @@ async def async_unload_entry(hass, entry):
     ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
+        from .services import async_unregister_services
+
+        async_unregister_services(hass)
     return ok

@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-14
+
+### Added
+
+- Direct, validated Home Assistant actions for approving or rejecting
+  registrations, setting approved routes, renaming nodes, setting tags, and
+  expiring nodes.
+- Secret-free action result events and automatic refresh after successful
+  changes.
+- Explicit confirmation requirement before a node can be expired.
+
+### Security
+
+- Every action requires an authenticated Home Assistant administrator, an exact
+  loaded config entry, positive node IDs, and conservative validation for
+  authentication IDs, single-label node names, routes, and non-empty tag lists.
+- No delete, user-management, API-key-management, policy-write, backfill, raw
+  request, or pre-auth-key creation action is exposed.
+
 ## [0.3.0] - 2026-11-14
 
 ### Added
@@ -67,7 +86,8 @@ All notable changes to this project are documented here.
 - Rejects CA input containing private-key material.
 - Does not provide Headscale mutation services.
 
-[Unreleased]: https://github.com/Schmitti93/headscale-ha/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Schmitti93/headscale-ha/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Schmitti93/headscale-ha/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.1...v0.2.2
