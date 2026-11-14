@@ -5,7 +5,7 @@ from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import HeadscaleError
-from .models import parse_snapshot
+from .models import build_snapshot
 
 
 class HeadscaleCoordinator(DataUpdateCoordinator):
@@ -17,8 +17,8 @@ class HeadscaleCoordinator(DataUpdateCoordinator):
         try:
             nodes = await self.client.async_get_nodes()
             version = await self.client.async_get_version()
-            return parse_snapshot(
-                {"nodes": nodes.get("nodes", nodes.get("node", [])), "version": version}
-            )
+            from homeassistant.util import dt as dt_util
+
+            return build_snapshot(nodes, version, dt_util.utcnow())
         except HeadscaleError as exc:
             raise UpdateFailed(str(exc)) from exc

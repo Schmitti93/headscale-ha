@@ -4,12 +4,12 @@ from urllib.parse import urlsplit, urlunsplit
 
 
 def normalize_url(value: str) -> str:
-    """Return a canonical HTTP(S) origin without trailing slash."""
+    """Return a canonical HTTPS origin without trailing slash."""
     parsed = urlsplit(value.strip())
     if parsed.username is not None or parsed.password is not None:
         raise ValueError("embedded credentials are not allowed")
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ValueError("URL must use http or https and include a host")
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise ValueError("URL must use HTTPS and include a host")
     if parsed.query or parsed.fragment:
         raise ValueError("query strings and fragments are not allowed")
     if parsed.path not in {"", "/"}:

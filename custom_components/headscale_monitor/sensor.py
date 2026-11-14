@@ -1,10 +1,16 @@
 """Headscale hub and node sensors."""
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
-from .entity import HeadscaleEntity, hub_device_info, node_device_info, unique_id
+from .entity import (
+    HeadscaleEntity,
+    NodeEntityMixin,
+    hub_device_info,
+    new_node_ids,
+    node_device_info,
+    unique_id,
+)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -12,6 +18,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities = []
     for metric in ("version", "total", "online", "offline", "last_update"):
         entities.append(HubSensor(c, entry, metric))
+    added_ids = {n.id for n in c.data.nodes}
     for n in c.data.nodes:
         for metric in (
             "ips",
@@ -24,6 +31,29 @@ async def async_setup_entry(hass, entry, async_add_entities):
         ):
             entities.append(NodeSensor(c, entry, n.id, metric))
     async_add_entities(entities)
+
+    def add_discovered_nodes():
+        discovered = new_node_ids(c.data, added_ids)
+        if not discovered:
+            return
+        added_ids.update(discovered)
+        async_add_entities(
+            [
+                NodeSensor(c, entry, node_id, metric)
+                for node_id in discovered
+                for metric in (
+                    "ips",
+                    "last_seen",
+                    "user_display_name",
+                    "expiration",
+                    "approved_routes",
+                    "available_routes",
+                    "registration_method",
+                )
+            ]
+        )
+
+    entry.async_on_unload(c.async_add_listener(add_discovered_nodes))
 
 
 class HubSensor(HeadscaleEntity, SensorEntity):
@@ -42,27 +72,27 @@ class HubSensor(HeadscaleEntity, SensorEntity):
             "total": len(nodes),
             "online": sum(n.online for n in nodes),
             "offline": sum(not n.online for n in nodes),
-            "last_update": dt_util.utcnow(),
+            "last_update": self.coordinator.data.last_update,
         }[self.metric]
 
 
-class NodeSensor(HeadscaleEntity, SensorEntity):
+class NodeSensor(NodeEntityMixin, HeadscaleEntity, SensorEntity):
     def __init__(self, c, e, node_id, metric):
         super().__init__(c, e)
         self.node_id = node_id
         self.metric = metric
         n = self.node
+        if n is None:
+            raise ValueError(f"node {node_id} is not present")
         self._attr_unique_id = unique_id(e.entry_id, "node", node_id, metric)
         self._attr_name = metric.replace("_", " ").title()
         self._attr_device_info = node_device_info(e.entry_id, node_id, n.name)
 
     @property
-    def node(self):
-        return next(n for n in self.coordinator.data.nodes if n.id == self.node_id)
-
-    @property
     def native_value(self):
         n = self.node
+        if n is None:
+            return None
         value = {
             "ips": n.ip_addresses,
             "last_seen": n.last_seen,

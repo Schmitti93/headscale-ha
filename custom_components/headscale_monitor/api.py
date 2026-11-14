@@ -8,6 +8,7 @@ from typing import Any
 import aiohttp
 
 MAX_RESPONSE_BYTES = 1_048_576
+RESPONSE_CHUNK_BYTES = 64 * 1024
 
 
 class HeadscaleError(Exception):
@@ -54,9 +55,14 @@ class HeadscaleApiClient:
                     and response.content_length > MAX_RESPONSE_BYTES
                 ):
                     raise HeadscaleResponseTooLarge("response exceeds size limit")
-                body = await response.read()
-                if len(body) > MAX_RESPONSE_BYTES:
-                    raise HeadscaleResponseTooLarge("response exceeds size limit")
+                chunks: list[bytes] = []
+                size = 0
+                async for chunk in response.content.iter_chunked(RESPONSE_CHUNK_BYTES):
+                    size += len(chunk)
+                    if size > MAX_RESPONSE_BYTES:
+                        raise HeadscaleResponseTooLarge("response exceeds size limit")
+                    chunks.append(chunk)
+                body = b"".join(chunks)
         except HeadscaleError:
             raise
         except (TimeoutError, aiohttp.ClientError) as exc:
@@ -73,4 +79,4 @@ class HeadscaleApiClient:
         return await self._get("/api/v1/node")
 
     async def async_get_version(self):
-        return await self._get("/api/v1/version")
+        return await self._get("/version")

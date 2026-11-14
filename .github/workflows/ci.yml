@@ -14,4 +14,4 @@ jobs:
       - run: ruff check .
       - run: mypy custom_components/headscale_monitor
       - run: bandit -q -r custom_components/headscale_monitor
-      - run: detect-secrets scan --all-files --exclude-files '\.venv/'
+      - run: detect-secrets scan --baseline .secrets.baseline --all-files

@@ -1,1 +1,1 @@
-{"domain":"headscale_monitor","name":"Headscale Monitor","codeowners":[],"config_flow":true,"dependencies":[],"documentation":"https://github.com/example/headscale-ha","iot_class":"local_polling","issue_tracker":"https://github.com/example/headscale-ha/issues","requirements":[],"version":"0.1.0"}
+{"domain":"headscale_monitor","name":"Headscale Monitor","config_flow":true,"dependencies":[],"iot_class":"local_polling","requirements":[],"version":"0.1.0"}

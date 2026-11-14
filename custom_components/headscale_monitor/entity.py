@@ -1,5 +1,7 @@
 """Stable identity helpers and coordinator entity base."""
 
+from typing import Any
+
 from .const import DOMAIN
 
 
@@ -24,6 +26,26 @@ def node_device_info(entry_id: str, node_id: int, name: str) -> dict:
         "manufacturer": "Headscale",
         "model": "Node",
     }
+
+
+def new_node_ids(snapshot, added_ids: set[int]) -> set[int]:
+    """Return stable IDs discovered after platform setup."""
+    return {node.id for node in snapshot.nodes} - added_ids
+
+
+class NodeEntityMixin:
+    """Safely resolve nodes that can disappear between refreshes."""
+
+    node_id: int
+    coordinator: Any
+
+    @property
+    def node(self):
+        return next((node for node in self.coordinator.data.nodes if node.id == self.node_id), None)
+
+    @property
+    def available(self) -> bool:
+        return bool(self.coordinator.last_update_success and self.node is not None)
 
 
 try:

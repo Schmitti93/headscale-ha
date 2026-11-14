@@ -28,7 +28,7 @@ class HeadscaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ig
                     url,
                     user_input[CONF_API_KEY],
                     async_get_clientsession(self.hass),
-                    user_input[CONF_VERIFY_TLS],
+                    True,
                 )
                 await client.async_get_nodes()
                 await self.async_set_unique_id(url)
@@ -38,7 +38,7 @@ class HeadscaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ig
                     data={
                         CONF_URL: url,
                         CONF_API_KEY: user_input[CONF_API_KEY],
-                        CONF_VERIFY_TLS: user_input[CONF_VERIFY_TLS],
+                        CONF_VERIFY_TLS: True,
                         CONF_SCAN_INTERVAL: interval,
                     },
                 )
@@ -52,10 +52,13 @@ class HeadscaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ig
             {
                 vol.Required(CONF_URL): str,
                 vol.Required(CONF_API_KEY): str,
-                vol.Required(CONF_VERIFY_TLS, default=True): bool,
                 vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
                     int, vol.Range(min=30, max=3600)
                 ),
             }
         )
-        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+        return self.async_show_form(
+            step_id="user",
+            data_schema=schema,  # type: ignore[arg-type]
+            errors=errors,
+        )

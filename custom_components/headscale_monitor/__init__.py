@@ -8,14 +8,14 @@ async def async_setup_entry(hass, entry):
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
     from .api import HeadscaleApiClient
-    from .const import CONF_API_KEY, CONF_SCAN_INTERVAL, CONF_VERIFY_TLS, DEFAULT_SCAN_INTERVAL
+    from .const import CONF_API_KEY, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
     from .coordinator import HeadscaleCoordinator
 
     client = HeadscaleApiClient(
         entry.data[CONF_URL],
         entry.data[CONF_API_KEY],
         async_get_clientsession(hass),
-        entry.data.get(CONF_VERIFY_TLS, True),
+        True,
     )
     coordinator = HeadscaleCoordinator(
         hass,

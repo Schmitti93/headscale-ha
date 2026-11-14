@@ -6,9 +6,13 @@ from typing import Any
 _REDACT = {
     "api_key",
     "apikey",
+    "url",
     "machinekey",
+    "machine_key",
     "nodekey",
+    "node_key",
     "discokey",
+    "disco_key",
     "preauthkey",
     "pre_auth_key",
     "email",
@@ -20,6 +24,13 @@ _REDACT = {
     "hostname",
     "givenname",
     "name",
+    "approvedroutes",
+    "approved_routes",
+    "availableroutes",
+    "available_routes",
+    "routes",
+    "prefixes",
+    "nodes",
 }
 
 
