@@ -25,6 +25,13 @@ def test_hacs_metadata_declares_integration_archive_layout():
     assert hacs["homeassistant"] == "2025.1.0"
 
 
+def test_marketplace_brand_assets_are_inside_integration_directory():
+    brand = ROOT / "custom_components/headscale_monitor/brand"
+
+    assert (brand / "icon.png").is_file()
+    assert (brand / "icon@2x.png").is_file()
+
+
 def test_english_translation_contains_all_entity_translation_keys():
     strings = json.loads(
         (ROOT / "custom_components/headscale_monitor/strings.json").read_text()

@@ -1,6 +1,7 @@
 {
   "domain": "headscale_monitor",
   "name": "Headscale Monitor",
+  "categories": ["computers_network"],
   "codeowners": ["@Schmitti93"],
   "config_flow": true,
   "dependencies": [],
