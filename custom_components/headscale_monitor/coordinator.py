@@ -1,5 +1,6 @@
 """DataUpdateCoordinator for read-only Headscale polling."""
 
+import logging
 from datetime import timedelta
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -7,12 +8,15 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import HeadscaleError
 from .models import build_snapshot
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class HeadscaleCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, client, interval):
         self.client = client
         super().__init__(
             hass,
+            _LOGGER,
             name=__name__,
             update_interval=timedelta(seconds=interval),
         )

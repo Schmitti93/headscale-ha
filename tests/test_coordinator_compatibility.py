@@ -23,4 +23,5 @@ def test_coordinator_passes_name_as_keyword() -> None:
     ]
 
     assert len(super_calls) == 1
+    assert len(super_calls[0].args) == 2
     assert any(keyword.arg == "name" for keyword in super_calls[0].keywords)
