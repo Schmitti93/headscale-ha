@@ -1,6 +1,9 @@
 # Headscale Monitor for Home Assistant
 
-A private, HACS-compatible, **read-only** custom integration for Headscale REST API v1, developed against Headscale 0.29.3. It polls server version and nodes and creates a hub device plus a device for each stable numeric node ID.
+A Marketplace-compatible, **read-only** custom integration for Headscale REST API v1. It polls the server version and nodes and creates a hub device plus a device for each stable numeric node ID. The live contract test currently covers Headscale `0.29.6` and Home Assistant `2025.2.5`.
+
+> [!IMPORTANT]
+> This project is not affiliated with or endorsed by the Headscale or Home Assistant projects.
 
 ## Security model and threat model
 
@@ -16,7 +19,53 @@ Hub: version, total nodes, online nodes, offline nodes, last update. Each node: 
 
 ## Installation
 
-Copy `custom_components/headscale_monitor` into Home Assistant's `custom_components`, restart Home Assistant, then add **Headscale Monitor** through Settings → Devices & services. HACS users may add the private repository as an Integration. Configure an HTTPS URL, API key, interval (30–3600 seconds), and optionally the private gateway's PEM CA certificate. Leave the CA field empty for the default system trust store. Certificate and hostname verification are always enabled; there is no `verify_tls` bypass.
+### Home Assistant Marketplace
+
+1. Open **Settings → Apps → Marketplace** in Home Assistant.
+2. Add `https://github.com/Schmitti93/headscale-ha` as a custom **Integration** repository if it is not listed yet.
+3. Install **Headscale Monitor** and restart Home Assistant when prompted.
+4. Open **Settings → Devices & services → Add integration** and select **Headscale Monitor**.
+
+### Manual installation
+
+Copy `custom_components/headscale_monitor` into Home Assistant's `custom_components` directory and restart Home Assistant.
+
+Configure an HTTPS origin URL, API key or gateway token, polling interval (30–3600 seconds), and optionally the private gateway's PEM CA certificate. Leave the CA field empty to use the system trust store. Certificate and hostname verification are always enabled; there is no `verify_tls` bypass.
+
+## Supported connection modes
+
+- **Recommended:** a narrow HTTPS gateway that exposes only `GET /version` and `GET /api/v1/node` under a separate client credential.
+- **Direct API:** the native Headscale API over HTTPS. Be aware that native Headscale API keys may carry full administrative authority even though this integration only sends GET requests.
+
+For the recommended production container, see the separate [Headscale Read-only Gateway](https://github.com/Schmitti93/headscale-readonly-gateway) project. The local [gateway example](docs/READ_ONLY_GATEWAY.md) documents the required controls and credential-rotation model.
+
+Plain HTTP, embedded URL credentials, URLs with a path/query/fragment, and disabled TLS verification are intentionally unsupported.
+
+## Credential lifecycle
+
+- Create a dedicated credential for this integration; never reuse a personal or unrelated automation credential.
+- Rotate credentials immediately after suspected exposure and periodically according to your local policy.
+- Removing the integration does **not** revoke a Headscale API key or gateway token. Revoke it separately on Headscale or the gateway.
+- Protect and preferably encrypt Home Assistant backups because config entries contain the configured credential and may contain a private CA certificate.
+
+## Troubleshooting
+
+- **Cannot connect:** verify DNS, routing, firewall rules, port, and that the configured value is an HTTPS origin without a path.
+- **Invalid authentication:** rotate or correct the API key/gateway token and verify that the gateway replaces it with a valid upstream Headscale key.
+- **Certificate error:** ensure the URL hostname or IP is present in the server certificate and paste only the issuing CA certificate in PEM format.
+- **Invalid response:** confirm the target implements Headscale REST API v1 and permits `GET /version` and `GET /api/v1/node`.
+- **Timeout:** check the gateway and Headscale logs; the integration intentionally uses finite connection and request timeouts.
+- **Oversized response:** the integration rejects responses larger than 1 MiB. Investigate the endpoint rather than disabling the limit.
+
+## Updating
+
+Marketplace installations receive updates from tagged GitHub releases. Review the changelog before updating and keep a current Home Assistant backup.
+
+## Support and security reports
+
+- Use GitHub Issues for reproducible bugs and feature requests.
+- Do not post API keys, gateway tokens, certificates containing private keys, diagnostics with topology data, or Home Assistant backups in public issues.
+- Report suspected vulnerabilities privately as described in [`SECURITY.md`](SECURITY.md).
 
 ## Isolated Home Assistant test instance
 

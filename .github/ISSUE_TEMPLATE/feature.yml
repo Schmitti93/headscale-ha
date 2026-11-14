@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest a narrowly scoped improvement
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: Describe the monitoring problem rather than only a proposed implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety boundary
+      options:
+        - label: This request does not require Headscale create, update, delete, route-change, or node-control operations.
+          required: true

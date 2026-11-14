@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a reproducible problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include API keys, gateway tokens, private keys, Home Assistant backups, or unredacted diagnostics.
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration version
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: home_assistant_version
+    attributes:
+      label: Home Assistant version
+    validations:
+      required: true
+  - type: input
+    id: headscale_version
+    attributes:
+      label: Headscale version
+    validations:
+      required: true
+  - type: dropdown
+    id: connection_mode
+    attributes:
+      label: Connection mode
+      options:
+        - Read-only gateway
+        - Direct Headscale API
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs
+      render: text

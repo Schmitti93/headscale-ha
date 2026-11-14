@@ -1,11 +1,13 @@
 {
   "domain": "headscale_monitor",
   "name": "Headscale Monitor",
-  "codeowners": [],
+  "codeowners": ["@Schmitti93"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://headscale.net/stable/ref/api/",
+  "documentation": "https://github.com/Schmitti93/headscale-ha",
+  "integration_type": "hub",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/Schmitti93/headscale-ha/issues",
   "requirements": [],
   "version": "0.2.0"
 }
