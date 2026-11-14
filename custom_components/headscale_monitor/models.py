@@ -28,6 +28,15 @@ class Snapshot:
     last_update: datetime | None = None
 
 
+def extract_node_items(response: dict[str, Any]) -> Any:
+    """Return the supported node collection or reject a malformed envelope."""
+    if "nodes" in response:
+        return response["nodes"]
+    if "node" in response:
+        return response["node"]
+    raise HeadscaleMalformedResponse("response must contain nodes or node")
+
+
 def _string_list(item: dict[str, Any], field: str) -> tuple[str, ...]:
     value = item.get(field, [])
     if not isinstance(value, list):
@@ -36,17 +45,20 @@ def _string_list(item: dict[str, Any], field: str) -> tuple[str, ...]:
 
 
 def build_snapshot(nodes: dict, version: dict, refreshed_at: datetime) -> Snapshot:
-    snapshot = parse_snapshot(
-        {"nodes": nodes.get("nodes", nodes.get("node", [])), "version": version}
-    )
+    snapshot = parse_snapshot({"nodes": extract_node_items(nodes), "version": version})
     return Snapshot(snapshot.version, snapshot.nodes, refreshed_at)
 
 
 def parse_snapshot(raw: dict[str, Any]) -> Snapshot:
-    version_obj = raw.get("version", {})
-    version = (
-        version_obj.get("version", "unknown") if isinstance(version_obj, dict) else str(version_obj)
-    )
+    version_obj = raw.get("version")
+    if isinstance(version_obj, dict):
+        version = version_obj.get("version")
+        if not isinstance(version, str) or not version:
+            raise HeadscaleMalformedResponse("version must be a non-empty string")
+    elif isinstance(version_obj, str) and version_obj:
+        version = version_obj
+    else:
+        raise HeadscaleMalformedResponse("version must be a non-empty string")
     items = raw.get("nodes", [])
     if not isinstance(items, list):
         raise HeadscaleMalformedResponse("nodes must be a list")

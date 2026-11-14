@@ -181,6 +181,20 @@ async def test_api_fetches_version_from_root_version_endpoint() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("version", [{}, {"version": None}, {"version": 29}, {"version": ""}])
+async def test_flow_validation_rejects_missing_or_invalid_version(version) -> None:
+    class Client:
+        async def async_get_version(self):
+            return version
+
+        async def async_get_nodes(self):
+            return {"nodes": []}
+
+    with pytest.raises(HeadscaleMalformedResponse, match="version"):
+        await async_validate_connection(Client())
+
+
+@pytest.mark.asyncio
 async def test_flow_validation_fetches_both_resources_and_builds_snapshot() -> None:
     class Client:
         def __init__(self):
@@ -199,6 +213,19 @@ async def test_flow_validation_fetches_both_resources_and_builds_snapshot() -> N
     assert client.calls == ["version", "nodes"]
     assert snapshot.version == "0.29.3"
     assert snapshot.nodes[0].id == 1
+
+
+@pytest.mark.asyncio
+async def test_flow_validation_rejects_missing_nodes_envelope_field() -> None:
+    class Client:
+        async def async_get_version(self):
+            return {"version": "0.29.3"}
+
+        async def async_get_nodes(self):
+            return {}
+
+    with pytest.raises(HeadscaleMalformedResponse, match="nodes or node"):
+        await async_validate_connection(Client())
 
 
 @pytest.mark.asyncio
@@ -251,3 +278,9 @@ def test_successful_refresh_timestamp_is_stored_in_snapshot() -> None:
     refreshed_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
     snapshot = build_snapshot({"nodes": []}, {"version": "0.29.3"}, refreshed_at)
     assert snapshot.last_update == refreshed_at
+
+
+def test_runtime_refresh_rejects_missing_nodes_envelope() -> None:
+    refreshed_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
+    with pytest.raises(HeadscaleMalformedResponse, match="nodes or node"):
+        build_snapshot({"unrelated": []}, {"version": "0.29.3"}, refreshed_at)

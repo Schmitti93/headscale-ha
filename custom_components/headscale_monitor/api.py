@@ -41,7 +41,6 @@ class HeadscaleApiClient:
         self._api_key = api_key
         self._session = session
 
-
     async def _get(self, path: str) -> dict[str, Any]:
         try:
             async with self._session.get(

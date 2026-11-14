@@ -20,13 +20,13 @@ Copy `custom_components/headscale_monitor` into Home Assistant's `custom_compone
 
 ## Isolated Home Assistant test instance
 
-`docker-compose.test.yml` pins Home Assistant `2025.2.5` and nginx `1.27.4-alpine` by image digest, declares only a `127.0.0.1:18123` host binding, and uses one internal Docker network. A locally built HTTPS mock exposes authenticated `/version` and `/api/v1/node` responses only on that network. Home Assistant receives the test CA explicitly through `SSL_CERT_FILE`; no real credentials, LAN endpoint, internet endpoint, privileged mode, host networking, or Docker socket is used. Containers drop all Linux capabilities and enable `no-new-privileges`.
+`docker-compose.test.yml` pins Home Assistant `2025.2.5` and nginx `1.27.4-alpine` by image digest and uses one internal Docker network with no host-published port. A locally built HTTPS mock exposes authenticated `/version` and `/api/v1/node` responses only on that network. Home Assistant receives the test CA explicitly through `SSL_CERT_FILE`; no real credentials, LAN endpoint, internet endpoint, privileged mode, host networking, or Docker socket is used. Containers drop all Linux capabilities and enable `no-new-privileges`.
 
 ```sh
 docker compose -f docker-compose.test.yml up
 ```
 
-Home Assistant itself requires a writable `/config` for onboarding, `.storage`, logs, and its database, so the compose file provides a dedicated named test volume. The test image copies the integration and CA into that volume at container initialization. Run `docker exec -e PYTHONPATH=/config headscale-ha-homeassistant-test-1 python /opt/compose_smoke.py` to exercise both API resources through the integration client. This stack must never be pointed at production HAOS.
+Home Assistant itself requires a writable `/config` for onboarding, `.storage`, logs, and its database, so the compose file provides a dedicated named test volume. The test image copies the integration and CA into that volume at container initialization. Run `docker compose -f docker-compose.test.yml exec -T homeassistant-test python /opt/compose_smoke.py` to exercise both API resources through the integration client. Verify Home Assistant readiness from inside the isolated container at `http://127.0.0.1:8123/`; the UI is deliberately not exposed to the host. This stack must never be pointed at production HAOS.
 
 Docker network isolation alone is not a strict outbound-LAN security boundary on every host configuration. Use host firewall rules (for example DOCKER-USER chain policy) when strict egress denial is required.
 

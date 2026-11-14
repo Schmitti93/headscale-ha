@@ -8,6 +8,11 @@ import tempfile
 from pathlib import Path
 
 
+def is_expected_detection(returncode: int) -> bool:
+    """Accept only detect-secrets' explicit finding exit status."""
+    return returncode == 1
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(dir=".") as directory:
         fixture = Path(directory) / "introduced_secret.py"
@@ -21,8 +26,11 @@ def main() -> int:
             ],
             check=False,
         )
-    if result.returncode == 0:
-        print("detect-secrets failed open: fixture secret was accepted", file=sys.stderr)
+    if not is_expected_detection(result.returncode):
+        print(
+            f"detect-secrets proof failed: expected finding exit 1, got {result.returncode}",
+            file=sys.stderr,
+        )
         return 1
     print("detect-secrets fail-closed proof passed")
     return 0

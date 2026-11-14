@@ -25,10 +25,9 @@ services:
       dockerfile: tests/homeassistant/Dockerfile
     depends_on:
       - headscale-mock
-    ports:
-      - "127.0.0.1:18123:8123"
     environment:
       SSL_CERT_FILE: /config/mock-ca.crt
+      PYTHONPATH: /config
     volumes:
       - ha-test-config:/config
     cap_drop:
