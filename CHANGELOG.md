@@ -4,10 +4,13 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-14
+
 ### Changed
 
-- Prepared repository metadata and documentation for Home Assistant Marketplace distribution.
-- Added public support and private vulnerability-reporting guidance.
+- Moved Marketplace brand assets into the integration directory required by validation.
+- Added HACS, Hassfest, and full-history secret-scanning gates.
+- Added the public companion gateway reference and publication metadata.
 
 ## [0.2.0] - 2026-11-14
 
@@ -29,5 +32,6 @@ All notable changes to this project are documented here.
 - Rejects CA input containing private-key material.
 - Does not provide Headscale mutation services.
 
-[Unreleased]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Schmitti93/headscale-ha/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Schmitti93/headscale-ha/releases/tag/v0.2.0
