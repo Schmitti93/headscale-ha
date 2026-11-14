@@ -7,6 +7,8 @@ from typing import Any
 
 import aiohttp
 
+from .validation import normalize_url
+
 MAX_RESPONSE_BYTES = 1_048_576
 RESPONSE_CHUNK_BYTES = 64 * 1024
 
@@ -33,17 +35,19 @@ class HeadscaleResponseTooLarge(HeadscaleError):
 
 class HeadscaleApiClient:
     def __init__(self, base_url: str, api_key: str, session: Any, verify_tls: bool = True) -> None:
-        self._base_url = base_url.rstrip("/")
+        if not verify_tls:
+            raise ValueError("TLS certificate verification is required")
+        self._base_url = normalize_url(base_url)
         self._api_key = api_key
         self._session = session
-        self._verify_tls = verify_tls
+
 
     async def _get(self, path: str) -> dict[str, Any]:
         try:
             async with self._session.get(
                 self._base_url + path,
                 headers={"Authorization": f"Bearer {self._api_key}", "Accept": "application/json"},
-                ssl=self._verify_tls,
+                ssl=True,
                 timeout=aiohttp.ClientTimeout(total=15, connect=5),
             ) as response:
                 if response.status in (401, 403):

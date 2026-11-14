@@ -20,13 +20,13 @@ Copy `custom_components/headscale_monitor` into Home Assistant's `custom_compone
 
 ## Isolated Home Assistant test instance
 
-`docker-compose.test.yml` pins Home Assistant to `2025.2.5`, binds only `127.0.0.1:18123`, uses an internal Docker network, does not use privileged mode, host networking, or the Docker socket, drops all Linux capabilities, enables `no-new-privileges`, mounts this integration read-only, and uses a restricted tmpfs for `/tmp`.
+`docker-compose.test.yml` pins Home Assistant `2025.2.5` and nginx `1.27.4-alpine` by image digest, declares only a `127.0.0.1:18123` host binding, and uses one internal Docker network. A locally built HTTPS mock exposes authenticated `/version` and `/api/v1/node` responses only on that network. Home Assistant receives the test CA explicitly through `SSL_CERT_FILE`; no real credentials, LAN endpoint, internet endpoint, privileged mode, host networking, or Docker socket is used. Containers drop all Linux capabilities and enable `no-new-privileges`.
 
 ```sh
 docker compose -f docker-compose.test.yml up
 ```
 
-Home Assistant itself requires a writable `/config` for onboarding, `.storage`, logs, and its database, so the compose file provides a dedicated named test volume. The integration source mount is read-only. This project does not start this stack automatically and it must never be pointed at production HAOS.
+Home Assistant itself requires a writable `/config` for onboarding, `.storage`, logs, and its database, so the compose file provides a dedicated named test volume. The test image copies the integration and CA into that volume at container initialization. Run `docker exec -e PYTHONPATH=/config headscale-ha-homeassistant-test-1 python /opt/compose_smoke.py` to exercise both API resources through the integration client. This stack must never be pointed at production HAOS.
 
 Docker network isolation alone is not a strict outbound-LAN security boundary on every host configuration. Use host firewall rules (for example DOCKER-USER chain policy) when strict egress denial is required.
 
@@ -34,7 +34,7 @@ Docker network isolation alone is not a strict outbound-LAN security boundary on
 
 Unit tests perform no real network requests.
 
-HA-level tests using `pytest-homeassistant-custom-component` were attempted in the provided Python 3.14 environment, but dependency installation exceeded the 420-second execution limit before the package became importable. The pure unit suite covers config-independent API, parsing, discovery, removal, timestamp, and redaction behavior; CI should add HA-level config-flow/entity lifecycle tests when the HA test dependency can be provisioned.
+HA-level tests using `pytest-homeassistant-custom-component` require a compatible Python/Home Assistant dependency set. The unit suite covers API transport enforcement, config-flow connection validation, parsing, discovery, removal, timestamps, and redaction; the isolated Compose smoke test runs the real client inside Home Assistant against the pinned HTTPS mock.
 
 ```sh
 python -m venv .venv
@@ -43,7 +43,8 @@ python -m venv .venv
 .venv/bin/ruff check .
 .venv/bin/mypy custom_components/headscale_monitor
 .venv/bin/bandit -q -r custom_components/headscale_monitor
-.venv/bin/python -m detect_secrets scan --baseline .secrets.baseline --all-files
+.venv/bin/python scripts/check_secrets.py
+.venv/bin/python scripts/prove_detect_secrets_fail_closed.py
 ```
 
 ## License

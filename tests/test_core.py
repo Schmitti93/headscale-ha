@@ -10,6 +10,10 @@ from custom_components.headscale_monitor.api import (
     HeadscaleResponseTooLarge,
 )
 from custom_components.headscale_monitor.diagnostics import diagnostic_payload, redact
+from custom_components.headscale_monitor.flow_validation import (
+    async_validate_connection,
+    config_flow_error,
+)
 from custom_components.headscale_monitor.models import build_snapshot, parse_snapshot
 from custom_components.headscale_monitor.validation import normalize_url, validate_scan_interval
 
@@ -26,6 +30,18 @@ def test_url_normalization_and_interval_bounds() -> None:
         normalize_url("https://example.com/unexpected/path")
     with pytest.raises(ValueError):
         validate_scan_interval(29)
+
+
+def test_api_client_rejects_insecure_transport_settings() -> None:
+    with pytest.raises(ValueError, match="HTTPS"):
+        HeadscaleApiClient("http://hs.example", "secret", FakeSession(FakeResponse(200, b"{}")))
+    with pytest.raises(ValueError, match="certificate verification"):
+        HeadscaleApiClient(
+            "https://hs.example",
+            "secret",
+            FakeSession(FakeResponse(200, b"{}")),
+            verify_tls=False,
+        )
 
 
 def test_parse_snapshot_handles_headscale_0293_snake_case_fields() -> None:
@@ -162,6 +178,53 @@ async def test_api_fetches_version_from_root_version_endpoint() -> None:
     client = HeadscaleApiClient("https://hs.example", "secret", session)
     assert await client.async_get_version() == {"version": "0.29.3"}
     assert session.calls[0][0] == "https://hs.example/version"
+
+
+@pytest.mark.asyncio
+async def test_flow_validation_fetches_both_resources_and_builds_snapshot() -> None:
+    class Client:
+        def __init__(self):
+            self.calls = []
+
+        async def async_get_version(self):
+            self.calls.append("version")
+            return {"version": "0.29.3"}
+
+        async def async_get_nodes(self):
+            self.calls.append("nodes")
+            return {"nodes": [{"id": 1, "name": "node"}]}
+
+    client = Client()
+    snapshot = await async_validate_connection(client)
+    assert client.calls == ["version", "nodes"]
+    assert snapshot.version == "0.29.3"
+    assert snapshot.nodes[0].id == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "nodes",
+    [
+        {"nodes": [{"name": "missing-id"}]},
+        {"nodes": [{"id": 1}, {"id": "1"}]},
+        {"nodes": "not-a-list"},
+    ],
+)
+async def test_flow_validation_rejects_malformed_node_schema(nodes) -> None:
+    class Client:
+        async def async_get_version(self):
+            return {"version": "0.29.3"}
+
+        async def async_get_nodes(self):
+            return nodes
+
+    with pytest.raises(HeadscaleMalformedResponse):
+        await async_validate_connection(Client())
+
+
+def test_response_too_large_is_a_controlled_config_flow_error() -> None:
+    assert config_flow_error(HeadscaleResponseTooLarge("too large")) == "invalid_data"
+    assert config_flow_error(HeadscaleAuthError("bad auth")) == "invalid_auth"
 
 
 @pytest.mark.asyncio

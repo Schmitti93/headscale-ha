@@ -4,15 +4,21 @@ from .const import DOMAIN, PLATFORMS
 
 
 async def async_setup_entry(hass, entry):
-    from homeassistant.const import CONF_URL
+    from homeassistant.exceptions import ConfigEntryError
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
     from .api import HeadscaleApiClient
     from .const import CONF_API_KEY, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
     from .coordinator import HeadscaleCoordinator
+    from .validation import validate_entry_transport
+
+    try:
+        url = validate_entry_transport(entry.data)
+    except ValueError as exc:
+        raise ConfigEntryError(f"Insecure or invalid Headscale config entry: {exc}") from exc
 
     client = HeadscaleApiClient(
-        entry.data[CONF_URL],
+        url,
         entry.data[CONF_API_KEY],
         async_get_clientsession(hass),
         True,

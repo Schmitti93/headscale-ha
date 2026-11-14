@@ -1,10 +1,35 @@
 services:
+  headscale-mock:
+    build:
+      context: ./tests/mock_headscale
+      dockerfile: Dockerfile
+    expose:
+      - "8443"
+    user: "101:101"
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:rw,noexec,nosuid,size=16m,mode=1777
+      - /var/run:rw,noexec,nosuid,size=1m,mode=1777
+      - /tmp:rw,noexec,nosuid,size=16m,mode=1777
+    restart: "no"
+    networks:
+      - isolated
+
   homeassistant-test:
-    image: ghcr.io/home-assistant/home-assistant:2025.2.5
+    build:
+      context: .
+      dockerfile: tests/homeassistant/Dockerfile
+    depends_on:
+      - headscale-mock
     ports:
       - "127.0.0.1:18123:8123"
+    environment:
+      SSL_CERT_FILE: /config/mock-ca.crt
     volumes:
-      - ./custom_components/headscale_monitor:/config/custom_components/headscale_monitor:ro
       - ha-test-config:/config
     cap_drop:
       - ALL
@@ -15,8 +40,10 @@ services:
     restart: "no"
     networks:
       - isolated
+
 networks:
   isolated:
     internal: true
+
 volumes:
   ha-test-config: {}

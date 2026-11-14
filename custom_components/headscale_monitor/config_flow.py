@@ -5,13 +5,9 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_URL
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import (
-    HeadscaleApiClient,
-    HeadscaleAuthError,
-    HeadscaleConnectionError,
-    HeadscaleMalformedResponse,
-)
+from .api import HeadscaleApiClient, HeadscaleError
 from .const import CONF_API_KEY, CONF_SCAN_INTERVAL, CONF_VERIFY_TLS, DEFAULT_SCAN_INTERVAL, DOMAIN
+from .flow_validation import async_validate_connection, config_flow_error
 from .validation import normalize_url, validate_scan_interval
 
 
@@ -30,7 +26,7 @@ class HeadscaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ig
                     async_get_clientsession(self.hass),
                     True,
                 )
-                await client.async_get_nodes()
+                await async_validate_connection(client)
                 await self.async_set_unique_id(url)
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
@@ -42,11 +38,9 @@ class HeadscaleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ig
                         CONF_SCAN_INTERVAL: interval,
                     },
                 )
-            except HeadscaleAuthError:
-                errors["base"] = "invalid_auth"
-            except HeadscaleConnectionError:
-                errors["base"] = "cannot_connect"
-            except (HeadscaleMalformedResponse, ValueError):
+            except HeadscaleError as exc:
+                errors["base"] = config_flow_error(exc)
+            except ValueError:
                 errors["base"] = "invalid_data"
         schema = vol.Schema(
             {
