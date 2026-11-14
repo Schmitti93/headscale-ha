@@ -1,0 +1,6 @@
+[allowlist]
+description = "Deterministic non-production fixtures and detect-secrets fingerprints"
+paths = [
+  '''^tests/mock_headscale/certs/server\.key$''',
+  '''^\.secrets\.baseline$''',
+]
